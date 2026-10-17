@@ -14,9 +14,23 @@ import {
 } from "lucide-react";
 
 type Result = {
-  depression: number;
-  anxiety: number;
-  sleep: number;
+  sleep_disorder: {
+    prediction: string;
+    risk: number;
+    confidence: number;
+  };
+
+  anxiety: {
+    prediction: string;
+    risk: number;
+    confidence: number;
+  };
+
+  depression: {
+    prediction: string;
+    risk: number;
+    confidence: number;
+  };
 };
 
 type FormState = {
@@ -51,7 +65,7 @@ type FormState = {
 
 const DEFAULTS: FormState = {
   age: 21,
-  gender: "",
+  gender: "Male",
   heightCm: 170,
   weightKg: 65,
   sleepHours: 6,
@@ -75,42 +89,42 @@ const DEFAULTS: FormState = {
   steps: 6500,
 };
 
-function predict(f: FormState): Result {
-  const sleepDeficit = Math.max(0, 8 - f.sleepHours);
-  const lowQuality = 10 - f.sleepQuality;
-  const lowSupport = 10 - f.socialSupport;
-  const lowMood = 10 - f.moodScore;
-  const inactivity = Math.max(0, 60 - f.activityMinutes) / 60;
+// function predict(f: FormState): Result {
+//   const sleepDeficit = Math.max(0, 8 - f.sleepHours);
+//   const lowQuality = 10 - f.sleepQuality;
+//   const lowSupport = 10 - f.socialSupport;
+//   const lowMood = 10 - f.moodScore;
+//   const inactivity = Math.max(0, 60 - f.activityMinutes) / 60;
 
-  const dep =
-    f.stress * 5 +
-    lowMood * 6 +
-    sleepDeficit * 5 +
-    lowSupport * 4 +
-    f.socialMediaHours * 2 +
-    inactivity * 8 +
-    (f.hrv < 40 ? 8 : 0);
+//   const dep =
+//     f.stress * 5 +
+//     lowMood * 6 +
+//     sleepDeficit * 5 +
+//     lowSupport * 4 +
+//     f.socialMediaHours * 2 +
+//     inactivity * 8 +
+//     (f.hrv < 40 ? 8 : 0);
 
-  const anx =
-    f.anxietyScore * 7 +
-    f.stress * 4 +
-    f.caffeineCups * 2 +
-    f.screenTimeHours * 1.5 +
-    (f.restingHr > 85 ? 8 : 0) +
-    lowSupport * 2;
+//   const anx =
+//     f.anxietyScore * 7 +
+//     f.stress * 4 +
+//     f.caffeineCups * 2 +
+//     f.screenTimeHours * 1.5 +
+//     (f.restingHr > 85 ? 8 : 0) +
+//     lowSupport * 2;
 
-  const slp =
-    sleepDeficit * 8 +
-    lowQuality * 5 +
-    f.awakenings * 4 +
-    (10 - f.bedtimeRegularity) * 3 +
-    f.caffeineCups * 2 +
-    f.screenTimeHours * 1.2;
+//   const slp =
+//     sleepDeficit * 8 +
+//     lowQuality * 5 +
+//     f.awakenings * 4 +
+//     (10 - f.bedtimeRegularity) * 3 +
+//     f.caffeineCups * 2 +
+//     f.screenTimeHours * 1.2;
 
-  const clamp = (n: number) => Math.max(4, Math.min(97, Math.round(n)));
-  return { depression: clamp(dep), anxiety: clamp(anx), sleep: clamp(slp) };
-}
-
+//   const clamp = (n: number) => Math.max(4, Math.min(97, Math.round(n)));
+//   return { depression: clamp(dep), anxiety: clamp(anx), sleep: clamp(slp) };
+// }
+const API_URL = "http://127.0.0.1:8004/predict";
 const steps = [
   { id: "personal", label: "Personal", icon: User },
   { id: "sleep", label: "Sleep", icon: Moon },
@@ -190,15 +204,103 @@ export function Predict() {
   const progress = ((stepIdx + 1) / steps.length) * 100;
   const isLast = stepIdx === steps.length - 1;
 
-  const next = () => {
-    if (isLast) {
-      setResult(predict(form));
-      const el = document.getElementById("risk-result");
-      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    } else {
-      setStepIdx((i) => i + 1);
-    }
-  };
+const next = async () => {
+
+  if (!isLast) {
+    setStepIdx((i) => i + 1);
+    return;
+  }
+
+  if (!form.gender) {
+    alert("Please select gender before running prediction.");
+    return;
+  }
+
+  try {
+
+    const payload = {
+
+      age: Number(form.age),
+
+      gender: form.gender.toLowerCase(),
+
+      height: Number(form.heightCm),
+
+      weight: Number(form.weightKg),
+
+      bmi: bmi || 0,
+
+      sleep_duration: form.sleepHours,
+
+      sleep_quality: form.sleepQuality,
+
+      bedtime_regularity: form.bedtimeRegularity,
+
+      night_awakenings: form.awakenings,
+
+      stress_level: form.stress,
+
+      anxiety_score: form.anxietyScore,
+
+      mood_score: form.moodScore,
+
+      physical_activity: form.activityMinutes,
+
+      screen_time: form.screenTimeHours,
+
+      social_media: form.socialMediaHours,
+
+      caffeine: form.caffeineCups,
+
+      social_support: form.socialSupport,
+
+      alcohol_use: form.alcohol.toLowerCase(),
+
+      smoking: form.smoking.toLowerCase(),
+
+      diet_quality: form.diet.toLowerCase(),
+
+      resting_heart_rate: form.restingHr,
+
+      heart_rate_variability: form.hrv,
+
+      spo2: form.spo2,
+
+      daily_steps: form.steps,
+    };
+
+    const response = await fetch(API_URL, {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    console.log(data);
+
+    setResult(data);
+
+    const el = document.getElementById("risk-result");
+
+    el?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Prediction failed. Backend not running.");
+
+  }
+};
 
   const reset = () => {
     setForm(DEFAULTS);
@@ -299,11 +401,8 @@ export function Predict() {
                       value={form.gender}
                       onChange={(e) => update("gender", e.target.value)}
                     >
-                      <option value="">Select gender</option>
                       <option>Female</option>
                       <option>Male</option>
-                      <option>Non-binary</option>
-                      <option>Prefer not to say</option>
                     </select>
                   </Field>
                   <Field label="Height (cm)" hint="Range: 120–220 cm">
@@ -593,20 +692,43 @@ export function Predict() {
             </div>
             <div className="font-display font-semibold mt-1">Risk profile</div>
             <div className="space-y-5 mt-6">
-              {[
-                { icon: Brain, label: "Depression", value: result?.depression },
-                { icon: HeartPulse, label: "Anxiety", value: result?.anxiety },
-                { icon: Moon, label: "Sleep disorder", value: result?.sleep },
-              ].map((r) => (
+             {[
+  {
+    icon: Brain,
+    label: "Depression",
+    value: result?.depression?.risk,
+    prediction: result?.depression?.prediction,
+  },
+
+  {
+    icon: HeartPulse,
+    label: "Anxiety",
+    value: result?.anxiety?.risk,
+    prediction: result?.anxiety?.prediction,
+  },
+
+  {
+    icon: Moon,
+    label: "Sleep disorder",
+    value: result?.sleep_disorder?.risk,
+    prediction: result?.sleep_disorder?.prediction,
+  },
+].map((r) => (
                 <div key={r.label}>
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="inline-flex items-center gap-2">
                       <r.icon className="w-4 h-4 text-primary" />
                       {r.label}
                     </span>
-                    <span className="font-medium tabular-nums">
-                      {r.value != null ? `${r.value}%` : "—"}
-                    </span>
+                    <div className="text-right">
+  <div className="font-medium tabular-nums">
+    {r.value != null ? `${r.value}%` : "—"}
+  </div>
+
+  <div className="text-[11px] text-muted-foreground">
+    {r.prediction || ""}
+  </div>
+</div>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <motion.div

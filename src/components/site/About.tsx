@@ -4,7 +4,7 @@ const items = [
   { icon: Brain, label: "Random Forest", desc: "Ensemble decision learner" },
   { icon: LineChart, label: "Logistic Regression", desc: "Probabilistic baseline" },
   { icon: Activity, label: "Decision Tree", desc: "Interpretable splits" },
-  { icon: HeartPulse, label: "Wearable Signals", desc: "Sleep, HR, activity" },
+  
 ];
 
 export function About() {
